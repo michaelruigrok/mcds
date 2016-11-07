@@ -60,21 +60,19 @@ echo_help () {
 #main
 
 if [[ -z "$DIR" ]]; then
-  FIRSTRUN=0
   echo "Please enter the directory the minecraft server lives at:"
   echo "(Leave blank if it's this one)"
   read directory
+  check_directory $directory
   [ -z "$directory" ] && directory=.
   DIR=$directory
   update_envar DIR $directory
-  update_envar FIRSTRUN 0
 fi
 
 while [[ $# -gt 1 ]]
 do
   if [[ $2 == -* ]]; then
     echo "Error: Option $1 missing parameter"
-    #todo: check if directory is bad
     exit
   fi
   case $1 in
