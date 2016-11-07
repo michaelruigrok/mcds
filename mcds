@@ -1,0 +1,190 @@
+#!/bin/bash
+#Copyright (C) 2015 Michael Ruigrok - protected under Australian and International Copyright law
+#Michael Ruigrok can be found at http://www.github.com/michaelruigrok/
+#or at ruigrok.michael@gmail.com 
+#Licence found within LICENSE
+############################################ 
+
+#envars
+DIR=
+
+#takes the property $1 and updates it to value $2 in the server properties
+update_property () {
+  echo "updating field $1"
+  sed -i -e "s/^$1=.*/$1=$2/" "$DIR/server.properties"
+}
+
+#takes the envar $1 and updates it to value $2 from within this file
+update_envar () {
+  echo "updating envar '$1'"
+  sed -i -e "s|^$1=.*|$1=$2|" "$0"
+}
+
+#updates the property $1 to match the binary value $2 in server properties
+set_bit () {
+  case $2 in 
+    true|1|on|set|yes)
+      update_property $1 true
+      ;;
+    false|0|off|clear|no)
+      update_property $1 false
+      ;;
+    *)
+      echo "Error: Option $1 is not a binary value"
+      exit
+  esac
+}
+
+#updates the property $1 to match the number value $2 in server properties
+set_num () {
+  regex='^[0-9]+$' 
+  if [[ $2 =~ $regex ]]; then
+    update_property $1 $2
+  else
+    echo "Error: Option $1 is not a number value"
+    exit
+  fi
+}
+
+check_directory () {
+  if [[ ! -d $1 ]]; then
+    echo "Error: Invalid directory '$1'"
+    exit
+  fi
+}
+
+echo_help () {
+  echo "This is mcds, the simple minecraft server launcher"
+}
+
+#main
+
+if [[ -z "$DIR" ]]; then
+  FIRSTRUN=0
+  echo "Please enter the directory the minecraft server lives at:"
+  echo "(Leave blank if it's this one)"
+  read directory
+  [ -z "$directory" ] && directory=.
+  DIR=$directory
+  update_envar DIR $directory
+  update_envar FIRSTRUN 0
+fi
+
+while [[ $# -gt 1 ]]
+do
+  if [[ $2 == -* ]]; then
+    echo "Error: Option $1 missing parameter"
+    #todo: check if directory is bad
+    exit
+  fi
+  case $1 in
+    -U|--update-path)
+      check_directory $2
+      update_envar DIR $2
+      DIR=$2
+      ;;
+    -l|--level)
+      update_property level-name $2
+      ;;
+    -R|--resource-pack)
+      update_property resource-pack $2
+      ;;
+    -s|--seed|--level-seed)
+      update_property level-seed $2
+      ;;
+    -M|--message|--motd)
+      update_property motd $2
+      ;;
+    -d|--difficulty)
+      difficulty=$2
+      case $difficulty in
+	[Pp]eaceful)
+	  difficulty=0
+	  ;;
+	[Ee]asy)
+	  difficulty=1
+	  ;;
+	[Nn]ormal)
+	  difficulty=2
+	  ;;
+	[Hh]ard)
+	  difficulty=3
+	  ;;
+      esac
+      if [[ $difficulty < 0 || $difficulty > 3 ]]; then
+	echo "Error: Difficulty invalid"
+	exit
+      fi
+      update_property difficulty $difficulty
+      ;;
+    -g|--gamemode)
+      gamemode=$2
+      case $gamemode in
+	[Ss]urvival)
+	  gamemode=0
+	  ;;
+	[Cc]reative)
+	  gamemode=1
+	  ;;
+	[Aa]dventure)
+	  gamemode=2
+	  ;;
+	[Ss]pectator)
+	  gamemode=3
+	  ;;
+      esac
+      if [[ $gamemode < 0 || $gamemode > 3 ]]; then
+	echo "Error: gamemode invalid"
+	exit
+      fi
+      ;;
+    -w|--whitelist|--white-list)
+      set_bit white-list $2
+      ;;
+    -r|--rcon|--enable-rcon)
+      set_bit enable-rcon $2
+      ;;
+    -o|--online|--online-mode)
+      set_bit online-mode $2
+      ;;
+    -h|--hardcore)
+      set_bit hardcore $2
+      ;;
+    -p|--pvp)
+      set_bit pvp $2
+      ;;
+    -n|--nether|--allow-nether)
+      set_bit allow-nether $2
+      ;;
+    -f|--flight|--allow-flight)
+      set_bit allow-flight $2
+      ;;
+    -m|--monsters|--spawn-monsters)
+      set_bit spawn-monsters $2
+      ;;
+    -c|--npcs|--spawn-npcs)
+      set_bit spawn-npcs $2
+      ;;
+    -a|--animals|--spawn-animals)
+      set_bit spawn-animals $2
+      ;;
+    -v|--view-distance)
+      set_num view-distance $2
+      ;;
+    -P|--port|--server-port)
+      set_num server-port $2
+      ;;
+    -H|--height|--max-build-height)
+      set_num max-build-height $2
+      ;;
+    *)
+      echo "Error: Unknown option $1"
+      exit
+      ;;
+  esac
+  shift 2
+done
+
+#run server
+echo "Running server..."
+java -Xmx1024M -Xms1024M -jar "$DIR/minecraft_server.jar" nogui
