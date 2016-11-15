@@ -163,9 +163,9 @@ elif [[ -z "$VERSION" ]]; then
 
   echo
   echo "We can download that version for you all good to go."
-  echo "If you already have a server on-hand, you'll need to move (or copy)"
-  echo "your current .jar file to 'minecraft_server.jar', and then run"
-  echo "this script again for the server to execute properly."
+  echo "If you already have a server on-hand and don't want to re-download, you'll"
+  echo "need to move (or copy) your current .jar file to 'minecraft_server.jar',"
+  echo "and then run this script again for the server to execute properly."
   echo "Would you like to download the server now (y/n)?"
   while read yn; do
   case $yn in
@@ -205,7 +205,6 @@ do
     -u|--update-server)
       update_server 
       old_arg_count=1
-      exit
       ;;
     -l|--level|--world)
       update_property level-name $2
