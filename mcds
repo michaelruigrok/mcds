@@ -6,8 +6,10 @@
 ############################################
 
 #envars
-README=./README
+README=./README.md
 DIR=
+VERSION=
+OLD_VERSION=
 
 #takes the property $1 and updates it to value $2 in the server properties
 update_property () {
@@ -19,6 +21,11 @@ update_property () {
 update_envar () {
   echo "updating envar '$1'"
   sed -i -e "s|^$1=.*|$1=$2|" "$0"
+}
+
+#updates field $1 to be $2 in file $3
+update_field () {
+  sed -i -e "s|^$1=.*|$1=$2|" "$3"
 }
 
 #updates the property $1 to match the binary value $2 in server properties
@@ -54,18 +61,65 @@ check_directory () {
   fi
 }
 
+#get the link to download the latest minecraft server
+get_server_download () {
+  link="$(curl https://minecraft.net/en/download/server 2> /dev/null | grep 'Download <a href=')"
+  echo "$(echo "$link" | sed 's%.*\(s3.*\.jar\)">.*%\1%')"
+}
+
+#retrieve the server version from a server download link
+#takes the link as its first and only argument
+get_latest_version () {
+  echo "$1" | sed 's%.*versions/\([0-9.]*\)/.*%\1%'
+}
+
+#apply the given version number as the current number
+update_server_version () {
+  update_envar OLD_VERSION "$VERSION"
+  update_envar VERSION "$1"
+  OLD_VERSION="$VERSION"
+  VERSION="$1"
+}
+
+#downloads the latest server update, if available
+#optional first argument specifies a version number other than the latest version
+update_server () {
+  link=$(get_server_download)
+  version=$(get_latest_version $link)
+
+  if [ ! -z $1 ]; then 
+    link=$(echo "$link" | sed "s%$version%$1%g")
+    version=$1
+  fi
+
+  if [ "$version" = "$VERSION" ]; then
+    echo "Version is current."
+    return 1
+  fi
+
+  echo "Downloading new server..."
+  if curl "$link" > $DIR/new_server.jar; then 
+    #if [ ! -e $DIR/minecraft_server.jar ]; then
+    echo "Downloaded new file, now making backup and replacing server jar"
+    mv minecraft_server.jar old_server.jar && mv new_server.jar minecraft_server.jar
+    update_server_version $version
+    return 0
+  fi
+  return 2
+}
+
 echo_help () {
   echo "This is mcds, the simple minecraft server launcher"
 }
 
 #main
 
-if [[ $1 = --help ]]; then
+if [ $1 = --help ]; then
   echo
   sed -n -e '/Options/,$p' $README
   exit
 
-elif [[ $1 = --args ]]; then
+elif [ $1 = --args ]; then
   echo
   echo "The last option name (Not the all-caps argument) corresponds to property name"
   echo "As it is in the server.properties file:"
@@ -81,22 +135,77 @@ elif [[ -z "$DIR" ]]; then
   [ -z "$directory" ] && directory=.
   DIR=$directory
   update_envar DIR $directory
+
+elif [ $1 = --reset ]; then
+  echo
+  echo "this will delete any knowledge of data in the server directory, but will"
+  echo "create a backup of this script inside of it just in case. Proceed (y/N)?"
+  read reset
+  [ $reset != 'y' ] && echo "Not resetting. Bye now!" && exit
+  cp "$0" $DIR/backup.mcds
+  echo "Backup at backup.mcds"
+  update_envar DIR
+  update_envar OLD_VERSION
+  update_envar VERSION
+  echo "All clean. Bye now"
+  exit
+
+
+elif [[ -z "$VERSION" ]]; then
+  echo "If you want a specific version number, enter in now."
+  echo "Otherwise, leave it blank for whatever the latest version is:"
+  read version
+  if [ -z "$version" ]; then 
+    link=$(get_server_download)
+    version=$(get_latest_version $link)
+    vno="latest"
+  fi
+
+  echo
+  echo "We can download that version for you all good to go."
+  echo "If you already have a server on-hand, you'll need to move (or copy)"
+  echo "your current .jar file to 'minecraft_server.jar', and then run"
+  echo "this script again for the server to execute properly."
+  echo "Would you like to download the server now (y/n)?"
+  while read yn; do
+  case $yn in
+    y|yes)
+      update_server $version
+      break
+      ;;
+    n|no)
+      update_server_version $version
+      echo "Okay, we'll be waiting for you right here."
+      exit
+      ;;
+    *)
+      echo "please enter yes or no (y/n)"
+      ;;
+  esac
+  done
 fi
 
-while [[ $# -gt 1 ]]
+while [[ $# -gt 0 ]]
 do
   if [[ $2 == -* ]]; then
     echo "Error: Option $1 missing parameter"
     exit
   fi
+  old_arg_count=2
   case $1 in
     --help)
       sed -n -e '/###Script Config/,$p'
       exit
+      ;;
     -U|--update-path)
       check_directory $2
       update_envar DIR $2
       DIR=$2
+      ;;
+    -u|--update-server)
+      update_server 
+      old_arg_count=1
+      exit
       ;;
     -l|--level|--world)
       update_property level-name $2
@@ -197,7 +306,7 @@ do
       exit
       ;;
   esac
-  shift 2
+  shift $old_arg_count
 done
 
 #run server

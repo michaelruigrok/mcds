@@ -38,6 +38,11 @@ first place, or just to alter minor things.
         properties. Must be the first option, any options before it will
         affect the current set directory.
 
+    -u, --update-server
+        Checks to see if an update for the minecraft .jar file is available,
+        and downloads it if it is. This also creates a backup of the old jar
+        file. Takes no arguments as of now.
+
 ###Server Operation
     -P, --port, --server-port NUMBER
         set the port number used by the server
