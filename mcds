@@ -5,11 +5,17 @@
 #Licence found within LICENSE
 ############################################
 
+
 #envars
 README=./README.md
-DIR=
+DIR=/root/minecraft
 VERSION=
 OLD_VERSION=
+
+#to be determined at runtime (probably don't change it):
+#executed path (this script), with dereferenced symlink
+  EPATH=$(readlink $0)
+[ -z $EPATH ] && EPATH=$0
 
 #takes the property $1 and updates it to value $2 in the server properties
 update_property () {
@@ -20,7 +26,7 @@ update_property () {
 #takes the envar $1 and updates it to value $2 from within this file
 update_envar () {
   echo "updating envar '$1'"
-  sed -i -e "s|^$1=.*|$1=$2|" "$0"
+  sed -i -e "s|^$1=.*|$1=$2|" "$EPATH"
 }
 
 #updates field $1 to be $2 in file $3
@@ -30,7 +36,7 @@ update_field () {
 
 #updates the property $1 to match the binary value $2 in server properties
 set_bit () {
-  case $2 in
+  case "$2" in
     true|1|on|set|yes)
       update_property $1 true
       ;;
@@ -54,11 +60,14 @@ set_num () {
   fi
 }
 
-check_directory () {
-  if [[ ! -d $1 ]]; then
+get_valid_directory () {
+  echo $1
+  dir=$(eval echo "${1}")
+  if ! [[ -d $dir ]]; then
     echo "Error: Invalid directory '$1'"
     exit
   fi
+  echo $dir
 }
 
 #get the link to download the latest minecraft server
@@ -114,12 +123,12 @@ echo_help () {
 
 #main
 
-if [ $1 = --help ]; then
+if [ "$1" = "--help" ]; then
   echo
   sed -n -e '/Options/,$p' $README
   exit
 
-elif [ $1 = --args ]; then
+elif [ "$1" = "--args" ]; then
   echo
   echo "The last option name (Not the all-caps argument) corresponds to property name"
   echo "As it is in the server.properties file:"
@@ -129,27 +138,26 @@ elif [ $1 = --args ]; then
 
 elif [[ -z "$DIR" ]]; then
   echo "Please enter the directory the minecraft server lives at:"
-  echo "(Leave blank if it's this one)"
+  echo "(Leave blank if it's the same place this script is at (following symlinks))"
   read directory
-  check_directory $directory
-  [ -z "$directory" ] && directory=.
+  [ -z "$directory" ] && directory=$(dirname "$EPATH")
+  directory=$(get_valid_directory "$directory")
   DIR=$directory
   update_envar DIR $directory
 
-elif [ $1 = --reset ]; then
+elif [ "$1" = "--reset" ]; then
   echo
   echo "this will delete any knowledge of data in the server directory, but will"
   echo "create a backup of this script inside of it just in case. Proceed (y/N)?"
   read reset
   [ $reset != 'y' ] && echo "Not resetting. Bye now!" && exit
-  cp "$0" $DIR/backup.mcds
+  cp "$EPATH" $DIR/backup.mcds
   echo "Backup at backup.mcds"
   update_envar DIR
   update_envar OLD_VERSION
   update_envar VERSION
   echo "All clean. Bye now"
   exit
-
 
 elif [[ -z "$VERSION" ]]; then
   echo "If you want a specific version number, enter in now."
@@ -185,6 +193,8 @@ elif [[ -z "$VERSION" ]]; then
   done
 fi
 
+cd $DIR
+
 while [[ $# -gt 0 ]]
 do
   if [[ $2 == -* ]]; then
@@ -198,9 +208,9 @@ do
       exit
       ;;
     -U|--update-path)
-      check_directory $2
-      update_envar DIR $2
-      DIR=$2
+      dir=$(get_valid_directory "$2")
+      update_envar DIR "$dir"
+      DIR="$dir"
       ;;
     -u|--update-server)
       update_server 
