@@ -8,7 +8,7 @@
 
 #envars
 README=./README.md
-DIR=/root/minecraft
+DIR=
 VERSION=
 OLD_VERSION=
 
@@ -70,16 +70,11 @@ get_valid_directory () {
   echo $dir
 }
 
-#get the link to download the latest minecraft server
-get_server_download () {
-  link="$(curl https://minecraft.net/en/download/server 2> /dev/null | grep 'Download <a href=')"
-  echo "$(echo "$link" | sed 's%.*\(s3.*\.jar\)">.*%\1%')"
-}
-
-#retrieve the server version from a server download link
-#takes the link as its first and only argument
+#retrieve the latest server version from mojang servers
 get_latest_version () {
-  echo "$1" | sed 's%.*versions/\([0-9.]*\)/.*%\1%'
+  link="$(curl https://launchermeta.mojang.com/mc/game/version_manifest.json 2> /dev/null | grep 'latest')"
+  #echo "$(echo "$link" | cut -d '}' -f 1 | sed 's%.*\(s3.*\.jar\)">.*%\1%')"
+  echo "$link" | cut -d '"' -f 10
 }
 
 #apply the given version number as the current number
@@ -92,19 +87,16 @@ update_server_version () {
 
 #downloads the latest server update, if available
 #optional first argument specifies a version number other than the latest version
-update_server () {
-  link=$(get_server_download)
-  version=$(get_latest_version $link)
+download_server () {
+  [ ! -z $1 ] && version=$1 || version=$(get_latest_version)
 
-  if [ ! -z $1 ]; then 
-    link=$(echo "$link" | sed "s%$version%$1%g")
-    version=$1
-  fi
 
   if [ "$version" = "$VERSION" ]; then
     echo "Version is current."
     return 1
   fi
+
+  link="https://s3.amazonaws.com/Minecraft.Download/versions/$version/minecraft_server.$version.jar"
 
   echo "Downloading new server..."
   if curl "$link" > $DIR/new_server.jar; then 
@@ -164,8 +156,7 @@ elif [[ -z "$VERSION" ]]; then
   echo "Otherwise, leave it blank for whatever the latest version is:"
   read version
   if [ -z "$version" ]; then 
-    link=$(get_server_download)
-    version=$(get_latest_version $link)
+    version=$(get_latest_version)
     vno="latest"
   fi
 
@@ -178,7 +169,7 @@ elif [[ -z "$VERSION" ]]; then
   while read yn; do
   case $yn in
     y|yes)
-      update_server $version
+      download_server $version
       break
       ;;
     n|no)
@@ -213,7 +204,7 @@ do
       DIR="$dir"
       ;;
     -u|--update-server)
-      update_server 
+      download_server 
       old_arg_count=1
       ;;
     -l|--level|--world)
