@@ -319,11 +319,13 @@ do
 done
 
 #filter is applied to the stdout of the server
-filter=
+#filter=
+
 
 #print the date next to any join/leave events
-filter="$filter | sed -e \"s/\(joined\|left\) the game/& on $(TZ=$TZ date)\"/"
+date='/(joined|left) the game/{ printf("%s on ", $0); system("date"); next } 1'
+filter="$filter | awk '$date'"
 
 #run server
 echo "Running server..."
-eval java -Xmx800M -Xms256M -jar "$DIR/minecraft_server.jar" nogui $filter
+eval java -Xmx800M -Xms256M -jar "$DIR/minecraft_server.jar" nogui "$filter"
