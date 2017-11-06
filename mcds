@@ -17,6 +17,11 @@ OLD_VERSION=
   EPATH=$(readlink $0)
 [ -z $EPATH ] && EPATH=$0
 
+error () {
+ (>&2 echo $@)
+ exit 1
+}
+
 #takes the property $1 and updates it to value $2 in the server properties
 update_property () {
   echo "updating field $1"
@@ -34,18 +39,27 @@ update_field () {
   sed -i -e "s|^$1=.*|$1=$2|" "$3"
 }
 
-#updates the property $1 to match the binary value $2 in server properties
-set_bit () {
-  case "$2" in
+#prints 'true' and if truthy, and 'false' if falsey, throw error & exit otherwise
+get_bit () {
+  case "$1" in
     true|1|on|set|yes)
-      update_property $1 true
+      echo "true"
       ;;
     false|0|off|clear|no)
-      update_property $1 false
+      echo "false"
       ;;
     *)
-      echo "Error: Option $1 is not a binary value"
-      exit
+      error "Option $1 is not a binary value"
+  esac
+}
+
+#updates the property $1 to match the binary value $2 in server properties
+set_bit () {
+  bit="$(get_bit)"
+  case "$2" in
+    true|false)
+      update_property "$1" "$bit"
+      ;;
   esac
 }
 
@@ -55,8 +69,7 @@ set_num () {
   if [[ $2 =~ $regex ]]; then
     update_property $1 $2
   else
-    echo "Error: Option $1 is not a number value"
-    exit
+    error "Option $1 is not a number value"
   fi
 }
 
@@ -64,8 +77,7 @@ get_valid_directory () {
   echo $1
   dir=$(eval echo "${1}")
   if ! [[ -d $dir ]]; then
-    echo "Error: Invalid directory '$1'"
-    exit
+    error "Invalid directory '$1'"
   fi
   echo $dir
 }
@@ -148,6 +160,7 @@ elif [ "$1" = "--reset" ]; then
   update_envar DIR
   update_envar OLD_VERSION
   update_envar VERSION
+  update_envar DATE true
   echo "All clean. Bye now"
   exit
 
@@ -188,9 +201,8 @@ cd $DIR
 
 while [[ $# -gt 0 ]]
 do
-  if [[ $2 == -* ]]; then
-    echo "Error: Option $1 missing parameter"
-    exit
+  if [ -z $2 ]; then
+    error "Option $1 missing parameter"
   fi
   old_arg_count=2
   case $1 in
@@ -208,19 +220,19 @@ do
       old_arg_count=1
       ;;
     -l|--level|--world)
-      update_property level-name $2
+      update_property level-name "$2"
       ;;
     -R|--resource-pack)
-      update_property resource-pack $2
+      update_property resource-pack "$2"
       ;;
     -s|--seed|--level-seed)
-      update_property level-seed $2
+      update_property level-seed "$2"
       ;;
     -M|--message|--motd)
-      update_property motd $2
+      update_property motd "$2"
       ;;
     -d|--difficulty)
-      difficulty=$2
+      difficulty="$2"
       case $difficulty in
         [Pp]eaceful)
           difficulty=0
@@ -236,8 +248,7 @@ do
           ;;
       esac
       if [[ $difficulty < 0 || $difficulty > 3 ]]; then
-        echo "Error: Difficulty invalid"
-        exit
+        error "Difficulty invalid"
       fi
       update_property difficulty $difficulty
       ;;
@@ -258,8 +269,7 @@ do
           ;;
       esac
       if [[ $gamemode < 0 || $gamemode > 3 ]]; then
-        echo "Error: gamemode invalid"
-        exit
+        error "gamemode invalid"
       fi
       ;;
     -w|--whitelist|--white-list)
@@ -302,13 +312,18 @@ do
       set_num max-build-height $2
       ;;
     *)
-      echo "Error: Unknown option $1"
-      exit
+      error "Unknown option $1"
       ;;
   esac
   shift $old_arg_count
 done
 
+#filter is applied to the stdout of the server
+filter=
+
+#print the date next to any join/leave events
+filter="$filter | sed -e \"s/\(joined\|left\) the game/& on $(TZ=$TZ date)\"/"
+
 #run server
 echo "Running server..."
-java -Xmx1024M -Xms1024M -jar "$DIR/minecraft_server.jar" nogui
+eval java -Xmx800M -Xms256M -jar "$DIR/minecraft_server.jar" nogui $filter
