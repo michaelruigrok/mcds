@@ -9,10 +9,10 @@ although the same can be achieved by simply swapping out the server.properties
 file. But who knows, you might want to use this script to generate it in the
 first place, or just to alter minor things.
 
-##Usage:
+## Usage:
     mcds [OPTIONS]
 
-##Options
+## Options
 - All options take an argument and cannot be combined
 - Double-dashed options are non-POSIX compliant, and take a spaced argument
     just like the single letter options
@@ -26,7 +26,7 @@ first place, or just to alter minor things.
     These ensure numbers are within range.
 
 
-###Script Options/Config
+### Script Options/Config
     --help
         Print a help message, currently this text
 
@@ -43,7 +43,7 @@ first place, or just to alter minor things.
         and downloads it if it is. This also creates a backup of the old jar
         file. Takes no arguments as of now.
 
-###Server Operation
+### Server Operation
     -P, --port, --server-port NUMBER
         set the port number used by the server
 
@@ -59,7 +59,7 @@ first place, or just to alter minor things.
     -o, --online, --online-mode BOOLEAN
         enable or disable online mode player authentication
 
-###Gameplay Settings
+### Gameplay Settings
     -g, --gamemode GAMEMODE
         set the gamemode to either survival, creative, adventure or spectator
 
@@ -76,7 +76,7 @@ first place, or just to alter minor things.
     -f, --flight, --allow-flight BOOLEAN
         enable or disable player flight via mods
 
-###World settings
+### World settings
     -l, --world, --level STRING
         set the world the server uses. Will create a new world if that world
         doesn't exist
@@ -96,7 +96,7 @@ first place, or just to alter minor things.
     -H, --height, --max-build-height NUMBER
         set the number of blocks high a player can build
 
-###Spawn Settings
+### Spawn Settings
     -m, --monsters, --spawn-monsters BOOLEAN
         enable or disable the spawning of monsters
 
