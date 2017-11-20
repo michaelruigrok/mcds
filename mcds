@@ -161,7 +161,7 @@ elif [ "$1" = "--reset" ]; then
   update_envar OLD_VERSION
   update_envar VERSION
   update_envar DATE true
-  echo "All clean. Bye now"
+  echo "All clean. Bye now!"
   exit
 
 elif [[ -z "$VERSION" ]]; then
@@ -323,7 +323,7 @@ done
 
 
 #print the date next to any join/leave events
-date='/(joined|left) the game/{ printf("%s on ", $0); system("date"); next } 1'
+date='/joined the game|left the game/{ printf("%s on ", $0); system("date"); next } 1'
 filter="$filter | awk '$date'"
 
 #run server
