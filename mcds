@@ -97,6 +97,11 @@ update_server_version () {
   VERSION="$1"
 }
 
+get_download_link() {
+  link="$(curl https://minecraft.net/en-us/download/server 2> /dev/null | grep 'Download <a href=')"
+  echo "$(echo "$link" | sed 's%.*\(https.*\.jar\)">.*%\1%')"
+}
+
 #downloads the latest server update, if available
 #optional first argument specifies a version number other than the latest version
 download_server () {
@@ -108,13 +113,17 @@ download_server () {
     return 1
   fi
 
-  link="https://s3.amazonaws.com/Minecraft.Download/versions/$version/minecraft_server.$version.jar"
+  link=$(get_download_link)
+  echo "link is $link"
 
   echo "Downloading new server..."
   if curl "$link" > $DIR/new_server.jar; then 
     #if [ ! -e $DIR/minecraft_server.jar ]; then
-    echo "Downloaded new file, now making backup and replacing server jar"
-    mv minecraft_server.jar old_server.jar && mv new_server.jar minecraft_server.jar
+    if [ -f minecraft_server.jar ]; then
+      echo "Downloaded new file, now making backup and replacing server jar"
+      mv minecraft_server.jar old_server.jar || return 2
+    fi
+    mv new_server.jar minecraft_server.jar
     update_server_version $version
     return 0
   fi
@@ -161,7 +170,7 @@ elif [ "$1" = "--reset" ]; then
   update_envar OLD_VERSION
   update_envar VERSION
   update_envar DATE true
-  echo "All clean. Bye now!"
+  echo "All clean. Bye now"
   exit
 
 elif [[ -z "$VERSION" ]]; then
