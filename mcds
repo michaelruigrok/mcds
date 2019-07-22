@@ -31,6 +31,7 @@ update_property () {
 #takes the envar $1 and updates it to value $2 from within this file
 update_envar () {
   echo "updating envar '$1'"
+  [ -z "$1" ] && error "Missing argument!"
   sed -i -e "s|^$1=.*|$1=$2|" "$EPATH"
 }
 
@@ -85,7 +86,6 @@ get_valid_directory () {
 #retrieve the latest server version from mojang servers
 get_latest_version () {
   link="$(curl https://launchermeta.mojang.com/mc/game/version_manifest.json 2> /dev/null | grep 'latest')"
-  #echo "$(echo "$link" | cut -d '}' -f 1 | sed 's%.*\(s3.*\.jar\)">.*%\1%')"
   echo "$link" | cut -d '"' -f 10
 }
 
@@ -98,7 +98,7 @@ update_server_version () {
 }
 
 get_download_link() {
-  link="$(curl https://minecraft.net/en-us/download/server 2> /dev/null | grep 'Download <a href=')"
+  link="$(curl https://www.minecraft.net/en-us/download/server 2> /dev/null | grep 'a href=.*jar')"
   echo "$(echo "$link" | sed 's%.*\(https.*\.jar\)">.*%\1%')"
 }
 
@@ -206,13 +206,10 @@ elif [[ -z "$VERSION" ]]; then
   done
 fi
 
-cd $DIR
+cd "$DIR"
 
 while [[ $# -gt 0 ]]
 do
-  if [ -z $2 ]; then
-    error "Option $1 missing parameter"
-  fi
   old_arg_count=2
   case $1 in
     --help)
