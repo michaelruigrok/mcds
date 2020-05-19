@@ -86,7 +86,16 @@ get_valid_directory () {
 #retrieve the latest server version from mojang servers
 get_latest_version () {
   local link="$(curl https://launchermeta.mojang.com/mc/game/version_manifest.json 2> /dev/null | grep 'latest')"
-  echo "$link" | cut -d '"' -f 10
+
+  local field="eval echo \"\$link\" | cut -d \\\" -f"
+
+  if [ "$($field 4)" == "release" ]; then
+	  echo "$($field 6)"
+  elif [ "$($field 8)" == "release" ]; then
+	  echo "$($field 10)"
+  else
+	  error "Sorry, server downloads is broken. It probably needs jq"
+  fi
 }
 
 #apply the given version number as the current number
