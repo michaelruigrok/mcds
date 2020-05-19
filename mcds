@@ -56,7 +56,7 @@ get_bit () {
 
 #updates the property $1 to match the binary value $2 in server properties
 set_bit () {
-  bit="$(get_bit)"
+  local bit="$(get_bit)"
   case "$2" in
     true|false)
       update_property "$1" "$bit"
@@ -66,7 +66,7 @@ set_bit () {
 
 #updates the property $1 to match the number value $2 in server properties
 set_num () {
-  regex='^[0-9]+$'
+  local regex='^[0-9]+$'
   if [[ $2 =~ $regex ]]; then
     update_property $1 $2
   else
@@ -76,7 +76,7 @@ set_num () {
 
 get_valid_directory () {
   echo $1
-  dir=$(eval echo "${1}")
+  local dir=$(eval echo "${1}")
   if ! [[ -d $dir ]]; then
     error "Invalid directory '$1'"
   fi
@@ -85,7 +85,7 @@ get_valid_directory () {
 
 #retrieve the latest server version from mojang servers
 get_latest_version () {
-  link="$(curl https://launchermeta.mojang.com/mc/game/version_manifest.json 2> /dev/null | grep 'latest')"
+  local link="$(curl https://launchermeta.mojang.com/mc/game/version_manifest.json 2> /dev/null | grep 'latest')"
   echo "$link" | cut -d '"' -f 10
 }
 
@@ -98,8 +98,8 @@ update_server_version () {
 }
 
 get_download_link() {
-  link="$(curl https://www.minecraft.net/en-us/download/server 2> /dev/null | grep 'a href=.*jar')"
-  echo "$(echo "$link" | sed 's%.*\(https.*\.jar\)">.*%\1%')"
+  local link="$(curl https://www.minecraft.net/en-us/download/server 2> /dev/null | grep 'a href=.*jar')"
+  echo "$link" | sed 's|.*href="\(https[^"]*\.jar\)".*|\1|'
 }
 
 #downloads the latest server update, if available
@@ -113,7 +113,7 @@ download_server () {
     return 1
   fi
 
-  link=$(get_download_link)
+  local link=$(get_download_link)
   echo "link is $link"
 
   echo "Downloading new server..."
@@ -154,7 +154,7 @@ elif [[ -z "$DIR" ]]; then
   echo "(Leave blank if it's the same place this script is at (following symlinks))"
   read directory
   [ -z "$directory" ] && directory=$(dirname "$EPATH")
-  directory=$(get_valid_directory "$directory")
+  local directory=$(get_valid_directory "$directory")
   DIR=$directory
   update_envar DIR $directory
 
@@ -178,8 +178,8 @@ elif [[ -z "$VERSION" ]]; then
   echo "Otherwise, leave it blank for whatever the latest version is:"
   read version
   if [ -z "$version" ]; then 
-    version=$(get_latest_version)
-    vno="latest"
+    local version=$(get_latest_version)
+    local vno="latest"
   fi
 
   echo
@@ -217,7 +217,7 @@ do
       exit
       ;;
     -U|--update-path)
-      dir=$(get_valid_directory "$2")
+      local dir=$(get_valid_directory "$2")
       update_envar DIR "$dir"
       DIR="$dir"
       ;;
@@ -238,7 +238,7 @@ do
       update_property motd "$2"
       ;;
     -d|--difficulty)
-      difficulty="$2"
+      local difficulty="$2"
       case $difficulty in
         [Pp]eaceful)
           difficulty=0
@@ -259,7 +259,7 @@ do
       update_property difficulty $difficulty
       ;;
     -g|--gamemode)
-      gamemode=$2
+      local gamemode=$2
       case $gamemode in
         [Ss]urvival)
           gamemode=0
